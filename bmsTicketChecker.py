@@ -4,6 +4,7 @@
 #------------------------------------------------------------------------------------------------------------------------
 
 import urllib
+from datetime import datetime
 from BeautifulSoup import BeautifulSoup, SoupStrainer
 from collections import defaultdict
 
@@ -50,6 +51,7 @@ def SelectMovie(movieDict) :
             choosenIndex = int(inputIndex) - 1
       except : 
             print INPUT_ERROR_MSG
+            exit()
 
       return movieDict.values()[choosenIndex]
 
@@ -77,10 +79,27 @@ def SelectTheater(theaterList) :
             choosenIndex = int(inputIndex) - 1
       except : 
             print INPUT_ERROR_MSG
+            exit()
 
       return theaterList[choosenIndex]
 
-(movieLink, movieTitle) = SelectMovie(GetMoviesList())
-theaterData = SelectTheater(GetListofTheaters())
-print "Choosen Movie", movieLink, movieTitle
-print theaterData
+def GetDateOfMovie() :
+      inputValue = raw_input("Please Enter the Date (within 2 days from now) in following format (YYYYMMDD) : ")
+      try : 
+            inputDate = datetime.strptime(inputValue, "%Y%m%d")
+      except : 
+            print INPUT_ERROR_MSG
+            exit()
+
+      todaysDate = datetime.now()
+      if  (inputDate - todaysDate).days < 0 or (inputDate - todaysDate).days > 2: 
+            print INPUT_ERROR_MSG
+            exit()
+
+      return inputValue
+
+
+
+print SelectMovie(GetMoviesList())
+print SelectTheater(GetListofTheaters())
+print GetDateOfMovie()
