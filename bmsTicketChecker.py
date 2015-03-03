@@ -4,89 +4,139 @@
 #------------------------------------------------------------------------------------------------------------------------
 
 import urllib
+import re
+import json
 from datetime import datetime
-from BeautifulSoup import BeautifulSoup, SoupStrainer
-from collections import defaultdict
 
 # Global Constants
 WEBSITE_ERROR_MSG = "Some Error while contacting WebSite. Please Try again later"
 INPUT_ERROR_MSG = "Wrong Input entered. Exiting"
-BMS_WEBSITE_ADDRESS = "http://in.bookmyshow.com"
-# Hard-Coded for now. Need to find a way to get a lsit of Cities
-CITY_NAME = "hyderabad"
-BMS_MOVIES_WEBPAGE = "movies"
 
-# Function to get list of movies in a City
-# both Now Showing and Next Change
-def GetMoviesList() :
+BMS_GETCITIES_QUERY = "http://in.bookmyshow.com/getJSData/?cmd=GETREGIONS"
+BMS_GETTHEATERS_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetVenues_MT_CITY.js&cmd=GETVENUESWEB&et=MT&rc=CITY"
+BMS_GETMOVIES_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetEvents_MT.js&cmd=GETEVENTSWEB&et=MT&rc=CITY"
+
+# This function uses a JQuery that the BMS site uses to select a City
+# We read the results of that Query and ask user to select the City
+# as per her preferences.
+def SelectCity() :
+      global WEBSITE_ERROR_MSG, INPUT_ERROR_MSG, BMS_GETCITIES_QUERY
+
+      # Read the Geographic data from BMS Website
       try :
-            pageContent = urllib.urlopen('/'.join([BMS_WEBSITE_ADDRESS, CITY_NAME, BMS_MOVIES_WEBPAGE])).read()
-            onlyMovieTags = SoupStrainer("a", "mvCnt")
-            movieSoup = BeautifulSoup(pageContent, parseOnlyThese=onlyMovieTags)
+            pageContent = urllib.urlopen(BMS_GETCITIES_QUERY).read()
+            
+            # Clean the read content from unWanted Data
+            pageContent = re.sub('var.+?=|;var.+', '', pageContent)
+            regionData = json.loads(pageContent)
+      except :
+            print WEBSITE_ERROR_MSG
+            exit()
+
+      # Ask User to select the State
+      counter = 1
+      for stateName in regionData.keys() :
+            print counter, stateName
+            counter = counter + 1
+      inputIndex = raw_input("Please Enter your State Name (Index): ")
+      try :
+            choosenIndex = int(inputIndex) - 1
+            if choosenIndex < 0 or choosenIndex >= len(regionData.keys()) : 
+                  raise Exception()
+      except : 
+            print INPUT_ERROR_MSG
+            exit()
+
+      # Ask User to choose a City from the selected State 
+      cityList = regionData.values()[choosenIndex]
+      counter = 1
+      for cityName in cityList :
+            print counter, cityName["name"]
+            counter = counter + 1
+      inputIndex = raw_input("Please Enter your City Name (Index): ")
+      try :
+            choosenIndex = int(inputIndex) - 1
+            if choosenIndex < 0 or choosenIndex >= len(cityList) : 
+                  raise Exception()
+      except : 
+            print INPUT_ERROR_MSG
+            exit()
+
+      return cityList[choosenIndex]
+
+# This function uses a JQuery that the BMS site uses to select a Theater
+# We read the results of that Query on the basis of City selected and 
+# ask user to select the Theater as per her preferences.
+def SelectTheater(cityCode) :
+      global WEBSITE_ERROR_MSG, INPUT_ERROR_MSG, BMS_GETTHEATERS_QUERY
+
+      # Read the Theater List from BMS Website
+      try : 
+            pageContent = urllib.urlopen(BMS_GETTHEATERS_QUERY.replace("CITY", cityCode)).read()
+
+            # Clean the read content from unWanted Data
+            pageContent = re.sub('aiVN=|;$', '', pageContent)
+            theaterData = json.loads(pageContent)
       except : 
             print WEBSITE_ERROR_MSG
             exit()
 
-      if len(movieSoup) < 1 :
-            return None
-
-      # TODO: Make sure that we need a dictionary over here and not list. If not convert this to a list of tuples
-      movieDict = defaultdict(list)
-      for movieData in movieSoup :
-            movieDict[movieData["data"]].append(movieData["href"])
-            movieDict[movieData["data"]].append(movieData["title"])
-
-      return movieDict
-
-# Function to ask for User Input to select a movie out of list
-# of movies in his/her city
-def SelectMovie(movieDict) :      
-      movieCounter = 1
-      for movieItem in movieDict.values() :
-            print movieCounter, movieItem[1]
-            movieCounter = movieCounter + 1
-
-      inputIndex = raw_input("Please Enter your Movie Choice: ")
+      # Ask User to Select the Theater
+      counter = 1
+      for theaterName in theaterData :
+            print counter, theaterName[2]
+            counter = counter + 1
+      inputIndex = raw_input("Please Enter your Theater Name (Index): ")
       try :
             choosenIndex = int(inputIndex) - 1
+            if choosenIndex < 0 or choosenIndex >= len(theaterData) : 
+                  raise Exception()
       except : 
             print INPUT_ERROR_MSG
+
+      return theaterData[choosenIndex]
+
+# This function uses a JQuery that the BMS site uses to select a Movie
+# We read the results of that Query on the basis of City selected and 
+# ask user to select the Movie as per her preferences.
+def SelectMovie(cityCode) :      
+      global WEBSITE_ERROR_MSG, INPUT_ERROR_MSG, BMS_GETMOVIES_QUERY
+
+      # Read the Movie List from BMS Website
+      try : 
+            pageContent = urllib.urlopen(BMS_GETMOVIES_QUERY.replace("CITY", cityCode)).read()
+
+            # Clean the read content from unWanted Data
+            pageContent = re.sub('aiLN=.+?;|aiEV=|;aiSRE=.*', '', pageContent)
+            movieData = json.loads(pageContent)
+      except : 
+            print WEBSITE_ERROR_MSG
             exit()
 
-      return movieDict.values()[choosenIndex]
-
-# For Now I have Hard-Coded the values as
-# the list of theater is generated by JavaScript
-# and need to dig more into that.
-def GetListofTheaters() :
-      theaterList = list()
-      theaterList.append(["PVR Sujana Forum Fiza Mall: Kukatpally", "PVSF"])
-      theaterList.append(["Cinepolis: Manjeera Mall, Hyderabad", "CPMH"])
-      theaterList.append(["PVR: Cyberabad, Inorbit Mall", "CXCB"])
-      theaterList.append(["PVR: Banjara Hills", "CXHY"])
-      theaterList.append(["Prasads: Hyderabad", "PRHN"])
-      return theaterList
-
-# Function to ask user for the choice of his/her theater
-def SelectTheater(theaterList) :
-      theaterCounter = 1
-      for theaterInfo in theaterList :
-            print theaterCounter, theaterInfo[0]
-            theaterCounter = theaterCounter + 1
-
-      inputIndex = raw_input("Please Enter your Theater Choice: ")
+      # Ask User to Select the Movie
+      counter = 1
+      for movieInfo in movieData :
+            print counter, movieInfo[4]
+            counter = counter + 1
+      inputIndex = raw_input("Please Enter your Movie Name (Index): ")
       try :
             choosenIndex = int(inputIndex) - 1
+            if choosenIndex < 0 or choosenIndex >= len(movieData) : 
+                  raise Exception()
       except : 
             print INPUT_ERROR_MSG
-            exit()
 
-      return theaterList[choosenIndex]
+      return movieData[choosenIndex]
 
+# This function is used to get the Date of the Movie from the user
+# Currently this has been set to make sure that the date is exactly 
+# within 2 days from today 
 def GetDateOfMovie() :
+      global INPUT_ERROR_MSG
+
       inputValue = raw_input("Please Enter the Date (within 2 days from now) in following format (YYYYMMDD) : ")
       try : 
-            inputDate = datetime.strptime(inputValue, "%Y%m%d")
+            inputDate = datetime.strptime(inputValue, '%Y%m%d')
       except : 
             print INPUT_ERROR_MSG
             exit()
@@ -99,7 +149,11 @@ def GetDateOfMovie() :
       return inputValue
 
 
-
-print SelectMovie(GetMoviesList())
-print SelectTheater(GetListofTheaters())
+# Main Code
+city = SelectCity()
+print city["code"]
+theaterData = SelectTheater(city["code"])
+print theaterData
+movieData = SelectMovie(city["code"])
+print movieData
 print GetDateOfMovie()
