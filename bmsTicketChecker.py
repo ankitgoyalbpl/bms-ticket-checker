@@ -6,6 +6,9 @@
 import urllib
 import re
 import json
+import sys
+import notify2
+import time
 from datetime import datetime
 
 # Global Constants
@@ -156,7 +159,8 @@ def GetDateOfMovie() :
 
 
 
-# 
+# This function gets the list of ShowTimes for the given city, Movie and Theater selected
+# It also gets the number of available seats for each showtime
 def GetShowTimes(cityCode, date, movieCode, theaterCode) : 
       global WEBSITE_ERROR_MSG, INPUT_ERROR_MSG, BMS_GETSHOWTIMESINFO_QUERY
 
@@ -192,5 +196,19 @@ city = SelectCity()
 theaterData = SelectTheater(city["code"])
 movieData = SelectMovie(city["code"])
 date = GetDateOfMovie()
-showTime = GetShowTimes(city["code"], date, movieData[5], theaterData[0])
 
+while True:
+      showTimes = GetShowTimes(city["code"], date, movieData[5], theaterData[0])
+
+      if len(showTimes) > 0 :
+            notify2.init("BookMyShow Checker")
+
+            for showTimeKey in showTimes : 
+                  bookingSummary = "Bookings Open...!!!"
+                  bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nAvailable-Seats: %s" %(movieData[4], date, theaterData[2], showTimes[showTimeKey][5], showTimes[showTimeKey][3])
+                  notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM ").show()
+
+            break
+
+      time.sleep(15)
+ 
