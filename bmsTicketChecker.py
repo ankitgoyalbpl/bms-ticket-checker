@@ -6,14 +6,14 @@
 import urllib
 import re
 import json
-import sys
 import notify2
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Global Constants
 WEBSITE_ERROR_MSG = "Some Error while contacting WebSite. Please Try again later"
 INPUT_ERROR_MSG = "Wrong Input entered. Exiting"
+SLEEP_TIME = int(300)                     # 5 Minutes
 
 BMS_GETCITIES_QUERY = "http://in.bookmyshow.com/getJSData/?cmd=GETREGIONS"
 BMS_GETTHEATERS_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetVenues_MT_CITY.js&cmd=GETVENUESWEB&et=MT&rc=CITY"
@@ -99,6 +99,7 @@ def SelectTheater(cityCode) :
                   raise Exception()
       except : 
             print INPUT_ERROR_MSG
+            exit()
 
       return theaterData[choosenIndex]
 
@@ -132,6 +133,7 @@ def SelectMovie(cityCode) :
                   raise Exception()
       except : 
             print INPUT_ERROR_MSG
+            exit()
 
       return movieData[choosenIndex]
 
@@ -142,19 +144,23 @@ def SelectMovie(cityCode) :
 def GetDateOfMovie() :
       global INPUT_ERROR_MSG
 
-      inputValue = raw_input("Please Enter the Date (within 2 days from now) in following format (YYYYMMDD) : ")
-      try : 
-            inputDate = datetime.strptime(inputValue, '%Y%m%d')
+      todaysDate = datetime.now()
+      counter = 0
+      while True :
+            print (counter + 1), (todaysDate + timedelta(days = counter)).date()
+            counter = counter + 1
+            if counter > 4 : 
+                  break
+      inputIndex = raw_input("Please Enter your Date (Index): ")
+      try :
+            choosenIndex = int(inputIndex) - 1
+            if choosenIndex < 0 or choosenIndex > 4 : 
+                  raise Exception()
       except : 
             print INPUT_ERROR_MSG
             exit()
 
-      todaysDate = datetime.now()
-      if  (inputDate - todaysDate).days < -2 or (inputDate - todaysDate).days > 1: 
-            print INPUT_ERROR_MSG
-            exit()
-
-      return inputValue
+      return (todaysDate + timedelta(days = choosenIndex)).date()
 
 
 
@@ -195,20 +201,36 @@ def GetShowTimes(cityCode, date, movieCode, theaterCode) :
 city = SelectCity()
 theaterData = SelectTheater(city["code"])
 movieData = SelectMovie(city["code"])
-date = GetDateOfMovie()
-
+movieDate = GetDateOfMovie()
+counter = 1
 while True:
-      showTimes = GetShowTimes(city["code"], date, movieData[5], theaterData[0])
+      showTimes = GetShowTimes(city["code"], movieDate.strftime("%Y%m%d"), movieData[5], theaterData[0])
 
+      # Found Match. Showing Results for each match
       if len(showTimes) > 0 :
             notify2.init("BookMyShow Checker")
 
             for showTimeKey in showTimes : 
                   bookingSummary = "Bookings Open...!!!"
-                  bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nAvailable-Seats: %s" %(movieData[4], date, theaterData[2], showTimes[showTimeKey][5], showTimes[showTimeKey][3])
-                  notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM ").show()
-
+                  bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nAvailable-Seats: %s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimes[showTimeKey][5], showTimes[showTimeKey][3])
+                  notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM").show()
+            break
+      
+      # More than 5 hours elapsed. Program will Quit
+      elif counter == 60 :
+            notify2.init("BookMyShow Checker")
+            bookingSummary = "Tired...!!! Exiting..."
+            bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nCan't find the Movie for selected details. Exiting...!!!" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2])
+            notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM").show()
             break
 
-      time.sleep(15)
+      # Search still in Progress
+      elif counter % 5 == 0 :
+            notify2.init("BookMyShow Checker")
+            bookingSummary = "Still Searching...!!!"
+            bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nCity: %s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], city["name"])
+            notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM").show()
+
+      counter = counter + 1
+      time.sleep(SLEEP_TIME)
  
