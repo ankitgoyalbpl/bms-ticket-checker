@@ -15,6 +15,8 @@ INPUT_ERROR_MSG = "Wrong Input entered. Exiting"
 BMS_GETCITIES_QUERY = "http://in.bookmyshow.com/getJSData/?cmd=GETREGIONS"
 BMS_GETTHEATERS_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetVenues_MT_CITY.js&cmd=GETVENUESWEB&et=MT&rc=CITY"
 BMS_GETMOVIES_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetEvents_MT.js&cmd=GETEVENTSWEB&et=MT&rc=CITY"
+BMS_GETSHOWTIMESINFO_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetShowTimesByEvent_CITY_MOVIECODE_DATE.js&cmd=GETSHOWTIMESBYEVENTWEB&ec=MOVIECODE&dc=DATE&rc=CITY"
+
 
 # This function uses a JQuery that the BMS site uses to select a City
 # We read the results of that Query and ask user to select the City
@@ -64,6 +66,7 @@ def SelectCity() :
 
       return cityList[choosenIndex]
 
+
 # This function uses a JQuery that the BMS site uses to select a Theater
 # We read the results of that Query on the basis of City selected and 
 # ask user to select the Theater as per her preferences.
@@ -95,6 +98,7 @@ def SelectTheater(cityCode) :
             print INPUT_ERROR_MSG
 
       return theaterData[choosenIndex]
+
 
 # This function uses a JQuery that the BMS site uses to select a Movie
 # We read the results of that Query on the basis of City selected and 
@@ -128,6 +132,7 @@ def SelectMovie(cityCode) :
 
       return movieData[choosenIndex]
 
+
 # This function is used to get the Date of the Movie from the user
 # Currently this has been set to make sure that the date is exactly 
 # within 2 days from today 
@@ -142,18 +147,50 @@ def GetDateOfMovie() :
             exit()
 
       todaysDate = datetime.now()
-      if  (inputDate - todaysDate).days < 0 or (inputDate - todaysDate).days > 2: 
+      if  (inputDate - todaysDate).days < -2 or (inputDate - todaysDate).days > 1: 
             print INPUT_ERROR_MSG
             exit()
 
       return inputValue
 
 
+
+
+# 
+def GetShowTimes(cityCode, date, movieCode, theaterCode) : 
+      global WEBSITE_ERROR_MSG, INPUT_ERROR_MSG, BMS_GETSHOWTIMESINFO_QUERY
+
+      showTimes = dict()
+      # Read the Movie List from BMS Website
+      try : 
+            BMS_GETSHOWTIMESINFO_QUERY = BMS_GETSHOWTIMESINFO_QUERY.replace("CITY", cityCode)
+            BMS_GETSHOWTIMESINFO_QUERY = BMS_GETSHOWTIMESINFO_QUERY.replace("MOVIECODE", movieCode)
+            BMS_GETSHOWTIMESINFO_QUERY = BMS_GETSHOWTIMESINFO_QUERY.replace("DATE", date)
+            pageContent = urllib.urlopen(BMS_GETSHOWTIMESINFO_QUERY).read()
+
+            # Clean the read content from unWanted Data
+            availPageContent = re.sub('aEV=.+?;|aVN=.+aAV=|;$', '', pageContent)
+            timePageContent = re.sub('aEV=.+?;|aVN=.+aST=|;aAV=.+;$', '', pageContent)
+            availabilityData = json.loads(availPageContent)
+            movieTimeData = json.loads(timePageContent) 
+      except : 
+            print WEBSITE_ERROR_MSG
+            exit()
+
+      for showTimeAvailInfo in availabilityData :
+            if showTimeAvailInfo[0] == theaterCode : 
+                  showTimes[showTimeAvailInfo[1]] = [showTimeAvailInfo[0], showTimeAvailInfo[3], showTimeAvailInfo[4], showTimeAvailInfo[5], showTimeAvailInfo[6]]
+
+      for movieTimeInfo in movieTimeData :
+            if movieTimeInfo[0] == theaterCode :
+                  showTimes[movieTimeInfo[2]].append(movieTimeInfo[3])
+
+      return showTimes
+
 # Main Code
 city = SelectCity()
-print city["code"]
 theaterData = SelectTheater(city["code"])
-print theaterData
 movieData = SelectMovie(city["code"])
-print movieData
-print GetDateOfMovie()
+date = GetDateOfMovie()
+showTime = GetShowTimes(city["code"], date, movieData[5], theaterData[0])
+
