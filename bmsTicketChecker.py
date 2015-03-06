@@ -8,7 +8,9 @@ import re
 import json
 import notify2
 import time
+import string
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 # Global Constants
 WEBSITE_ERROR_MSG = "Some Error while contacting WebSite. Please Try again later"
@@ -170,7 +172,7 @@ def GetDateOfMovie() :
 def GetShowTimes(cityCode, date, movieCode, theaterCode) : 
       global WEBSITE_ERROR_MSG, INPUT_ERROR_MSG, BMS_GETSHOWTIMESINFO_QUERY
 
-      showTimes = dict()
+      showTimes = list()
       # Read the Movie List from BMS Website
       try : 
             BMS_GETSHOWTIMESINFO_QUERY = BMS_GETSHOWTIMESINFO_QUERY.replace("CITY", cityCode)
@@ -178,7 +180,6 @@ def GetShowTimes(cityCode, date, movieCode, theaterCode) :
             BMS_GETSHOWTIMESINFO_QUERY = BMS_GETSHOWTIMESINFO_QUERY.replace("DATE", date)
             pageContent = urllib.urlopen(BMS_GETSHOWTIMESINFO_QUERY).read()
 
-            print BMS_GETSHOWTIMESINFO_QUERY
             # Clean the read content from unWanted Data
             availPageContent = re.sub('aEV=.+?;|aVN=.+aAV=|;$', '', pageContent)
             timePageContent = re.sub('aEV=.+?;|aVN=.+aST=|;aAV=.+;$', '', pageContent)
@@ -188,13 +189,10 @@ def GetShowTimes(cityCode, date, movieCode, theaterCode) :
             print WEBSITE_ERROR_MSG
             exit()
 
-      for showTimeAvailInfo in availabilityData :
-            if showTimeAvailInfo[0] == theaterCode : 
-                  showTimes[showTimeAvailInfo[1]] = [showTimeAvailInfo[0], showTimeAvailInfo[3], showTimeAvailInfo[4], showTimeAvailInfo[5], showTimeAvailInfo[6]]
-
       for movieTimeInfo in movieTimeData :
-            if movieTimeInfo[0] == theaterCode :
-                  showTimes[movieTimeInfo[2]].append(movieTimeInfo[3])
+            for showTimeAvailInfo in availabilityData : 
+                  if movieTimeInfo[0] == theaterCode and showTimeAvailInfo[0] == theaterCode :
+                        showTimes.append([showTimeAvailInfo[0], showTimeAvailInfo[3], showTimeAvailInfo[4], showTimeAvailInfo[5], showTimeAvailInfo[6], movieTimeInfo[1], movieTimeInfo[3]])
 
       return showTimes
 
@@ -211,9 +209,9 @@ while True:
       if len(showTimes) > 0 :
             notify2.init("BookMyShow Checker")
 
-            for showTimeKey in showTimes : 
+            for showTimesInfo in showTimes : 
                   bookingSummary = "Bookings Open...!!!"
-                  bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nAvailable-Seats: %s/%s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimes[showTimeKey][5], showTimes[showTimeKey][3], showTimes[showTimeKey][4])
+                  bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nClass: %s \nAvailable-Seats: %s/%s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimesInfo[6], showTimesInfo[1].capitalize(), showTimesInfo[3], showTimesInfo[4])
                   notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM").show()
             break
       
