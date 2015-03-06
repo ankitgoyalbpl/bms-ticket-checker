@@ -23,8 +23,6 @@ BMS_GETTHEATERS_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetVe
 BMS_GETMOVIES_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetEvents_MT.js&cmd=GETEVENTSWEB&et=MT&rc=CITY"
 BMS_GETSHOWTIMESINFO_QUERY = "http://in.bookmyshow.com/getJSData/?file=/data/js/GetShowTimesByEvent_CITY_MOVIECODE_DATE.js&cmd=GETSHOWTIMESBYEVENTWEB&ec=MOVIECODE&dc=DATE&rc=CITY"
 
-srcEmailID = "ankitgoyal.bpl@gmail.com"
-
 # This function uses a JQuery that the BMS site uses to select a City
 # We read the results of that Query and ask user to select the City
 # as per her preferences.
@@ -202,7 +200,9 @@ def GetShowTimes(cityCode, date, movieCode, theaterCode) :
 
 
 # Main Code
-destEmailId = raw_input("Enter your Email Id: ")
+emailId = raw_input("Enter your Email Id: ")
+emailMessage = ""
+ticketFound = False
 city = SelectCity()
 theaterData = SelectTheater(city["code"])
 movieData = SelectMovie(city["code"])
@@ -218,6 +218,8 @@ while True:
                   bookingSummary = "Bookings Open...!!!"
                   bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nClass: %s \nAvailable-Seats: %s/%s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimesInfo[6], showTimesInfo[2].capitalize(), showTimesInfo[4], showTimesInfo[5])
                   notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM").show()
+                  emailMessage = emailMessage + "\n\nMovie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nClass: %s \nAvailable-Seats: %s/%s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimesInfo[6], showTimesInfo[2].capitalize(), showTimesInfo[4], showTimesInfo[5])
+            ticketFound = True
             break
       
       # More than 5 hours elapsed. Program will Quit
@@ -236,3 +238,10 @@ while True:
       counter = counter + 1
       time.sleep(SLEEP_TIME)
  
+if ticketFound == True : 
+      try:
+            smtpObj = smtplib.SMTP('localhost')
+            smtpObj.sendmail(emailId, emailId, emailMessage)         
+      except:
+            exit()
+   
