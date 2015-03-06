@@ -147,7 +147,7 @@ def GetDateOfMovie() :
       todaysDate = datetime.now()
       counter = 0
       while True :
-            print (counter + 1), (todaysDate + timedelta(days = counter)).date()
+            print (counter + 1), (todaysDate + timedelta(days = counter)).date().strftime("%A - %d %B, %Y")
             counter = counter + 1
             if counter > 4 : 
                   break
@@ -178,6 +178,7 @@ def GetShowTimes(cityCode, date, movieCode, theaterCode) :
             BMS_GETSHOWTIMESINFO_QUERY = BMS_GETSHOWTIMESINFO_QUERY.replace("DATE", date)
             pageContent = urllib.urlopen(BMS_GETSHOWTIMESINFO_QUERY).read()
 
+            print BMS_GETSHOWTIMESINFO_QUERY
             # Clean the read content from unWanted Data
             availPageContent = re.sub('aEV=.+?;|aVN=.+aAV=|;$', '', pageContent)
             timePageContent = re.sub('aEV=.+?;|aVN=.+aST=|;aAV=.+;$', '', pageContent)
@@ -212,7 +213,7 @@ while True:
 
             for showTimeKey in showTimes : 
                   bookingSummary = "Bookings Open...!!!"
-                  bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nAvailable-Seats: %s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimes[showTimeKey][5], showTimes[showTimeKey][3])
+                  bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nAvailable-Seats: %s/%s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimes[showTimeKey][5], showTimes[showTimeKey][3], showTimes[showTimeKey][4])
                   notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM").show()
             break
       
