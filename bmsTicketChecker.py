@@ -9,9 +9,7 @@ import json
 import notify2
 import time
 import string
-import smtplib
 from datetime import datetime, timedelta
-from collections import defaultdict
 
 # Global Constants
 WEBSITE_ERROR_MSG = "Some Error while contacting WebSite. Please Try again later"
@@ -200,9 +198,6 @@ def GetShowTimes(cityCode, date, movieCode, theaterCode) :
 
 
 # Main Code
-emailId = raw_input("Enter your Email Id: ")
-emailMessage = ""
-ticketFound = False
 city = SelectCity()
 theaterData = SelectTheater(city["code"])
 movieData = SelectMovie(city["code"])
@@ -218,8 +213,6 @@ while True:
                   bookingSummary = "Bookings Open...!!!"
                   bookingMessage = "Movie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nClass: %s \nAvailable-Seats: %s/%s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimesInfo[6], showTimesInfo[2].capitalize(), showTimesInfo[4], showTimesInfo[5])
                   notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM").show()
-                  emailMessage = emailMessage + "\n\nMovie: %s \nDate: %s \nTheater: %s \nShowTime: %s \nClass: %s \nAvailable-Seats: %s/%s" %(movieData[4], movieDate.strftime("%A - %d %B, %Y"), theaterData[2], showTimesInfo[6], showTimesInfo[2].capitalize(), showTimesInfo[4], showTimesInfo[5])
-            ticketFound = True
             break
       
       # More than 5 hours elapsed. Program will Quit
@@ -236,12 +229,6 @@ while True:
             notify2.Notification(bookingSummary, bookingMessage, "notification-message-IM").show()
 
       counter = counter + 1
-      time.sleep(SLEEP_TIME)
- 
-if ticketFound == True : 
-      try:
-            smtpObj = smtplib.SMTP('localhost')
-            smtpObj.sendmail(emailId, emailId, emailMessage)         
-      except:
-            exit()
+      time.sleep(SLEEP_TIME)    
+
    
